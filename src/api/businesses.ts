@@ -19,20 +19,10 @@ export async function updateProfileBusiness(businessId: string, role: 'admin' | 
 }
 
 export async function createBusiness(name: string): Promise<Business> {
-  const user = (await supabase.auth.getUser()).data.user!;
-  const { data, error } = await supabase
-    .from('businesses')
-    .insert({ name, owner_id: user.id })
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc('create_business_for_user', {
+    business_name: name,
+  });
   if (error) throw error;
-
-  // Creator becomes admin
-  await supabase
-    .from('profiles')
-    .update({ business_id: data.id, role: 'admin' })
-    .eq('id', user.id);
-
   return data as Business;
 }
 

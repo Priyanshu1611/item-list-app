@@ -9,7 +9,6 @@ import { ImageUpload } from '../components/ImageUpload';
 import { CategoryPicker } from '../components/CategoryPicker';
 import { useItems } from '../hooks/useItems';
 import type { Item, Profile } from '../types';
-import type { Category } from '../constants/theme';
 
 interface Props {
   profile: Profile;
@@ -18,7 +17,7 @@ interface Props {
 }
 
 export function ItemManagementScreen({ profile, editingItem, onBack }: Props) {
-  const { addItem, editItem } = useItems(profile.business_id, profile.role);
+  const { addItem, editItem, categories } = useItems(profile.business_id, profile.role);
 
   const [name, setName] = useState(editingItem?.name ?? '');
   const [category, setCategory] = useState<string>(editingItem?.category ?? 'Uncategorized');
@@ -27,6 +26,9 @@ export function ItemManagementScreen({ profile, editingItem, onBack }: Props) {
   );
   const [sellingPrice, setSellingPrice] = useState(
     editingItem?.selling_price != null ? String(editingItem.selling_price) : ''
+  );
+  const [discountPercent, setDiscountPercent] = useState(
+    editingItem?.discount_percent ? String(editingItem.discount_percent) : ''
   );
   const [imageUri, setImageUri] = useState<string | null>(editingItem?.image_path ?? null);
   const [newImageUri, setNewImageUri] = useState<string | null>(null);
@@ -40,6 +42,9 @@ export function ItemManagementScreen({ profile, editingItem, onBack }: Props) {
     if (!name.trim()) e.name = 'Item name is required.';
     if (!sellingPrice.trim() || isNaN(Number(sellingPrice))) e.sellingPrice = 'Enter a valid selling price.';
     if (buyingPrice.trim() && isNaN(Number(buyingPrice))) e.buyingPrice = 'Enter a valid buying price.';
+    const disc = Number(discountPercent);
+    if (discountPercent.trim() && (isNaN(disc) || disc < 0 || disc > 100))
+      e.discountPercent = 'Discount must be 0–100.';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -50,9 +55,10 @@ export function ItemManagementScreen({ profile, editingItem, onBack }: Props) {
     try {
       const formData = {
         name: name.trim(),
-        category,
+        category: category || 'Uncategorized',
         selling_price: Number(sellingPrice),
         buying_price: buyingPrice.trim() ? Number(buyingPrice) : null,
+        discount_percent: discountPercent.trim() ? Number(discountPercent) : 0,
         image_path: imageUri,
       };
 
@@ -115,7 +121,12 @@ export function ItemManagementScreen({ profile, editingItem, onBack }: Props) {
             error={errors.name}
           />
 
-          <CategoryPicker label="Category" value={category} onChange={(c: Category) => setCategory(c)} />
+          <CategoryPicker
+            label="Category"
+            value={category}
+            onChange={(c: string) => setCategory(c)}
+            existingCategories={categories}
+          />
 
           <Input
             label="Selling Price (₹) *"
@@ -133,6 +144,15 @@ export function ItemManagementScreen({ profile, editingItem, onBack }: Props) {
             placeholder="0.00 (optional)"
             keyboardType="decimal-pad"
             error={errors.buyingPrice}
+          />
+
+          <Input
+            label="Discount %"
+            value={discountPercent}
+            onChangeText={setDiscountPercent}
+            placeholder="0 (optional, e.g. 10 for 10% off)"
+            keyboardType="decimal-pad"
+            error={errors.discountPercent}
           />
 
           <View style={{ height: 8 }} />

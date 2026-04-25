@@ -1,11 +1,22 @@
 import { supabase } from './supabase';
 import type { Item, ItemFormData, SortOption, UserRole } from '../types';
 
+export async function fetchCategories(businessId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('items')
+    .select('category')
+    .eq('business_id', businessId);
+  if (error) return [];
+  const cats = [...new Set((data ?? []).map((r: any) => r.category).filter(Boolean))] as string[];
+  return cats.sort();
+}
+
 export async function fetchItems(
   businessId: string,
   role: UserRole,
   search: string,
-  sort: SortOption
+  sort: SortOption,
+  categoryFilter?: string
 ): Promise<Item[]> {
   // Staff uses view that excludes buying_price
   const table = role === 'admin' ? 'items' : 'items_staff_view';
@@ -17,6 +28,10 @@ export async function fetchItems(
 
   if (search.trim()) {
     query = query.ilike('name', `%${search.trim()}%`);
+  }
+
+  if (categoryFilter && categoryFilter !== 'All') {
+    query = query.eq('category', categoryFilter);
   }
 
   switch (sort) {

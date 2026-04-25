@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import {
   View, Text, FlatList, TextInput, TouchableOpacity,
-  SafeAreaView, StatusBar, ActivityIndicator, Alert,
+  SafeAreaView, StatusBar, ActivityIndicator, Alert, Share, Clipboard,
 } from 'react-native';
 import { ItemCard } from '../components/ItemCard';
+import { ItemDetailModal } from '../components/ItemDetailModal';
 import { useItems } from '../hooks/useItems';
 import type { Profile, Item, SortOption } from '../types';
 import { SORT_OPTIONS } from '../constants/theme';
@@ -18,10 +19,42 @@ interface Props {
 
 export function DashboardScreen({ profile, businessName, onAddItem, onEditItem, onLogout }: Props) {
   const [sortOpen, setSortOpen] = useState(false);
-  const { items, loading, search, setSearch, sort, setSort, refresh, removeItem } = useItems(
-    profile.business_id,
-    profile.role
-  );
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [detailItem, setDetailItem] = useState<Item | null>(null);
+  const {
+    items, categories, loading,
+    search, setSearch,
+    sort, setSort,
+    categoryFilter, setCategoryFilter,
+    refresh, removeItem,
+  } = useItems(profile.business_id, profile.role);
+
+  const handleShareBusinessId = () => {
+    if (!profile.business_id) return;
+    Alert.alert(
+      'Share Business ID',
+      'How do you want to share?',
+      [
+        {
+          text: 'Copy ID',
+          onPress: () => {
+            Clipboard.setString(profile.business_id!);
+            Alert.alert('Copied!', 'Business ID copied to clipboard.\nShare it with your staff.');
+          },
+        },
+        {
+          text: 'Share via...',
+          onPress: () => {
+            Share.share({
+              message: `Join my business on PriceList!\n\nBusiness ID: ${profile.business_id}\n\n1. Download PriceList app\n2. Sign in with Google\n3. Tap "Join Existing Business"\n4. Paste the Business ID above`,
+              title: `Join ${businessName} on PriceList`,
+            });
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
 
   const confirmDelete = (id: string, name: string) => {
     Alert.alert('Delete Item', `Delete "${name}"?`, [
@@ -55,18 +88,25 @@ export function DashboardScreen({ profile, businessName, onAddItem, onEditItem, 
             {profile.role} · {profile.email}
           </Text>
         </View>
-        <TouchableOpacity onPress={onLogout}>
-          <Text style={{ fontSize: 22 }}>🚪</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
+          {profile.role === 'admin' && (
+            <TouchableOpacity onPress={handleShareBusinessId} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Text style={{ fontSize: 22 }}>🔗</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={onLogout} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={{ fontSize: 22 }}>🚪</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Search + Sort Bar */}
+      {/* Search + Sort + Category Bar */}
       <View
         style={{
           flexDirection: 'row',
           paddingHorizontal: 16,
           paddingVertical: 12,
-          gap: 10,
+          gap: 8,
           backgroundColor: '#FFFFFF',
           borderBottomWidth: 1,
           borderColor: '#E5E7EB',
@@ -90,13 +130,32 @@ export function DashboardScreen({ profile, businessName, onAddItem, onEditItem, 
           onChangeText={setSearch}
           returnKeyType="search"
         />
+        {/* Category dropdown button */}
+        {categories.length > 0 && (
+          <TouchableOpacity
+            onPress={() => { setCategoryOpen(!categoryOpen); setSortOpen(false); }}
+            style={{
+              borderWidth: 1,
+              borderColor: categoryFilter !== 'All' ? '#2563EB' : '#D1D5DB',
+              borderRadius: 10,
+              paddingHorizontal: 10,
+              justifyContent: 'center',
+              backgroundColor: categoryFilter !== 'All' ? '#EFF6FF' : '#F9FAFB',
+            }}
+          >
+            <Text style={{ fontSize: 13, color: categoryFilter !== 'All' ? '#2563EB' : '#374151', fontWeight: '500' }}>
+              {categoryFilter === 'All' ? '🏷️ Cat' : `🏷️ ${categoryFilter.length > 8 ? categoryFilter.slice(0, 8) + '…' : categoryFilter}`} ▾
+            </Text>
+          </TouchableOpacity>
+        )}
+        {/* Sort dropdown button */}
         <TouchableOpacity
-          onPress={() => setSortOpen(!sortOpen)}
+          onPress={() => { setSortOpen(!sortOpen); setCategoryOpen(false); }}
           style={{
             borderWidth: 1,
             borderColor: '#D1D5DB',
             borderRadius: 10,
-            paddingHorizontal: 12,
+            paddingHorizontal: 10,
             justifyContent: 'center',
             backgroundColor: '#F9FAFB',
           }}
@@ -107,26 +166,30 @@ export function DashboardScreen({ profile, businessName, onAddItem, onEditItem, 
         </TouchableOpacity>
       </View>
 
+      {/* Category Dropdown */}
+      {categoryOpen && (
+        <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: '#E5E7EB', paddingVertical: 4 }}>
+          {['All', ...categories].map((cat) => (
+            <TouchableOpacity
+              key={cat}
+              onPress={() => { setCategoryFilter(cat); setCategoryOpen(false); }}
+              style={{ paddingHorizontal: 20, paddingVertical: 12, flexDirection: 'row', justifyContent: 'space-between' }}
+            >
+              <Text style={{ fontSize: 15, color: '#374151' }}>{cat}</Text>
+              {categoryFilter === cat && <Text style={{ color: '#2563EB' }}>✓</Text>}
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
       {/* Sort Dropdown */}
       {sortOpen && (
-        <View
-          style={{
-            backgroundColor: '#FFFFFF',
-            borderBottomWidth: 1,
-            borderColor: '#E5E7EB',
-            paddingVertical: 4,
-          }}
-        >
+        <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: '#E5E7EB', paddingVertical: 4 }}>
           {SORT_OPTIONS.map((opt) => (
             <TouchableOpacity
               key={opt.value}
               onPress={() => { setSort(opt.value as SortOption); setSortOpen(false); }}
-              style={{
-                paddingHorizontal: 20,
-                paddingVertical: 12,
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-              }}
+              style={{ paddingHorizontal: 20, paddingVertical: 12, flexDirection: 'row', justifyContent: 'space-between' }}
             >
               <Text style={{ fontSize: 15, color: '#374151' }}>{opt.label}</Text>
               {sort === opt.value && <Text style={{ color: '#2563EB' }}>✓</Text>}
@@ -139,6 +202,7 @@ export function DashboardScreen({ profile, businessName, onAddItem, onEditItem, 
       <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 }}>
         <Text style={{ fontSize: 13, color: '#6B7280' }}>
           {items.length} item{items.length !== 1 ? 's' : ''}
+          {categoryFilter !== 'All' ? ` in ${categoryFilter}` : ''}
         </Text>
       </View>
 
@@ -156,7 +220,7 @@ export function DashboardScreen({ profile, businessName, onAddItem, onEditItem, 
             <ItemCard
               item={item}
               role={profile.role}
-              onPress={() => profile.role === 'admin' && onEditItem(item)}
+              onPress={() => profile.role === 'admin' ? onEditItem(item) : setDetailItem(item)}
               onDelete={profile.role === 'admin' ? () => confirmDelete(item.id, item.name) : undefined}
             />
           )}
@@ -172,6 +236,13 @@ export function DashboardScreen({ profile, businessName, onAddItem, onEditItem, 
           refreshing={loading}
         />
       )}
+
+      {/* Item detail modal — staff */}
+      <ItemDetailModal
+        item={detailItem}
+        visible={!!detailItem}
+        onClose={() => setDetailItem(null)}
+      />
 
       {/* FAB — admin only */}
       {profile.role === 'admin' && (

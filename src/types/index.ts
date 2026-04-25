@@ -22,6 +22,7 @@ export interface Item {
   category: string;
   buying_price: number | null; // null for staff (not returned from API)
   selling_price: number;
+  discount_percent: number;    // 0 = no discount
   image_path: string | null;
   created_at: string;
   updated_at: string;
