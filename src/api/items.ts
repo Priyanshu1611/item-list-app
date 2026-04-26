@@ -76,7 +76,7 @@ export async function updateItem(id: string, form: Partial<ItemFormData>): Promi
 }
 
 export async function deleteItem(id: string): Promise<void> {
-  const { error } = await supabase.from('items').delete().eq('id', id);
+  const { error } = await supabase.rpc('delete_item_for_user', { item_id: id });
   if (error) throw error;
 }
 

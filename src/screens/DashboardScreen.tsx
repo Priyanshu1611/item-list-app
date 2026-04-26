@@ -57,10 +57,24 @@ export function DashboardScreen({ profile, businessName, onAddItem, onEditItem, 
   };
 
   const confirmDelete = (id: string, name: string) => {
-    Alert.alert('Delete Item', `Delete "${name}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => removeItem(id) },
-    ]);
+    const doDelete = async () => {
+      try {
+        await removeItem(id);
+      } catch (e: any) {
+        Alert.alert('Delete Failed', e.message);
+      }
+    };
+
+    if (typeof window !== 'undefined' && window.confirm) {
+      // Web: use native browser confirm
+      if (window.confirm(`Delete "${name}"?`)) doDelete();
+    } else {
+      // Native: use Alert
+      Alert.alert('Delete Item', `Delete "${name}"?`, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: doDelete },
+      ]);
+    }
   };
 
   const currentSortLabel = SORT_OPTIONS.find((o) => o.value === sort)?.label ?? 'Sort';

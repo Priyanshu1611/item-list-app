@@ -27,7 +27,13 @@
       "package": "com.pricelist.app"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "PriceList",
+      "shortName": "PriceList",
+      "description": "Manage your shop inventory",
+      "themeColor": "#2563EB",
+      "backgroundColor": "#ffffff",
+      "output": "single-page"
     },
     "plugins": [
       "expo-secure-store",

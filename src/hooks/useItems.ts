@@ -62,8 +62,13 @@ export function useItems(businessId: string | null, role: UserRole) {
   }, [businessId]);
 
   const removeItem = useCallback(async (id: string) => {
-    await deleteItem(id);
-    setItems((prev) => prev.filter((i) => i.id !== id));
+    try {
+      await deleteItem(id);
+      setItems((prev) => prev.filter((i) => i.id !== id));
+    } catch (e: any) {
+      setError(e.message);
+      throw e;
+    }
   }, []);
 
   return {
